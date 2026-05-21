@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Camera Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #eef2f7;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar-custom {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .control-card {
+            background: #ffffff;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+        .card-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .video-container {
+            background-color: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            margin-bottom: 25px;
+            position: relative;
+        }
+        .video-container img {
+            width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        .live-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .dpad-container {
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            grid-template-rows: repeat(3, 70px);
+            gap: 10px;
+            justify-content: center;
+            margin: 30px auto;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 50%;
+            width: fit-content;
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .dpad-btn {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            padding: 0;
+            border-radius: 15px;
+            background: linear-gradient(145deg, #ffffff, #e6e6e6);
+            border: none;
+            color: #333;
+            box-shadow: 5px 5px 10px #d1d1d1, -5px -5px 10px #ffffff;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+        .dpad-btn:active {
+            background: #e6e6e6;
+            box-shadow: inset 5px 5px 10px #d1d1d1, inset -5px -5px 10px #ffffff;
+            transform: scale(0.95);
+        }
+        .dpad-center {
+            border-radius: 50%;
+            background: linear-gradient(145deg, #e6e6e6, #ffffff);
+            color: #2a5298;
+            font-size: 20px;
+        }
+        .btn-custom {
+            border-radius: 10px;
+            font-weight: 600;
+            padding: 10px;
+        }
+        .video-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark navbar-custom mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">📹 Smart Camera Dashboard</a>
+            <a href="/logout" class="btn btn-outline-light btn-sm rounded-pill px-3">🚪 ออกจากระบบ</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="video-container">
+                    <div class="live-badge">🔴 LIVE</div>
+                    <img src="/video_feed" alt="Live Camera Stream" id="videoStream">
+                </div>
+
+                <div class="control-card">
+                    <h5 class="card-title text-success">
+                        <span>🎞️</span> คลังวิดีโอย้อนหลัง
+                    </h5>
+                    <div class="row mt-3">
+                        <div class="col-md-7 mb-3">
+                            <video id="playbackPlayer" controls class="w-100 rounded shadow-sm" style="background: #000; display: none;"></video>
+                            <div id="videoPlaceholder" class="w-100 rounded d-flex align-items-center justify-content-center text-muted" style="background: #e9ecef; height: 250px; border: 2px dashed #ccc;">
+                                เลือกวิดีโอจากรายการด้านขวาเพื่อเล่น
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="list-group video-list" id="videoListContainer">
+                                </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                
+                <div class="control-card">
+                    <h5 class="card-title text-primary">
+                        <span>🕹️</span> ควบคุมทิศทางกล้อง
+                    </h5>
+                    <div class="mb-2">
+                        <label for="speedSelect" class="form-label text-muted small fw-bold">⚡ ความเร็วการเคลื่อนที่</label>
+                        <select class="form-select border-0 bg-light shadow-sm" id="speedSelect" onchange="sendSpeedCommand(this.value)">
+                            <option value="1">🐢 ช้ามาก (Gradual / Smooth)</option>
+                            <option value="2">🚶 ช้า (Slow)</option>
+                            <option value="3" selected>🚗 ปกติ (Normal)</option>
+                            <option value="4">✈️ เร็ว (Fast)</option>
+                            <option value="5">⚡ เร็วมาก (Instant)</option>
+                        </select>
+                    </div>
+
+                    <div class="dpad-container">
+                        <div></div>
+                        <button class="dpad-btn" onclick="moveServo('up')">▲</button>
+                        <div></div>
+                        
+                        <button class="dpad-btn" onclick="moveServo('left')">◀</button>
+                        <button class="dpad-btn dpad-center" onclick="resetServo()">🔄</button>
+                        <button class="dpad-btn" onclick="moveServo('right')">▶</button>
+                        
+                        <div></div>
+                        <button class="dpad-btn" onclick="moveServo('down')">▼</button>
+                        <div></div>
+                    </div>
+                </div>
+
+                <div class="control-card">
+                    <h5 class="card-title text-info">
+                        <span>👤</span> สอน AI จดจำใบหน้า
+                    </h5>
+                    <p class="text-muted small mb-2">หันกล้องไปที่หน้าคน พิมพ์ชื่อ แล้วกดปุ่มเพื่อให้ AI จดจำ</p>
+                    <div class="input-group mb-3">
+                        <input type="text" id="personName" class="form-control" placeholder="ชื่อ (Ex. Boss)" aria-label="ชื่อ">
+                        <button class="btn btn-info text-white fw-bold" onclick="learnNewFace()">บันทึกใบหน้า</button>
+                    </div>
+                </div>
+
+                <div class="control-card">
+                    <h5 class="card-title text-danger">
+                        <span>🔴</span> ควบคุมการบันทึก
+                    </h5>
+                    <div class="d-grid gap-2 mb-3">
+                        <button class="btn btn-danger btn-custom" id="btnRecordStart" onclick="toggleRecord('start')">▶️ เริ่มบันทึก (Start)</button>
+                        <button class="btn btn-dark btn-custom" id="btnRecordStop" onclick="toggleRecord('stop')" disabled>⏹️ หยุดบันทึก (Stop)</button>
+                    </div>
+                    <div class="text-center">
+                        <span id="recordStatusBadge" class="badge bg-secondary fs-6 w-100 py-2 rounded-pill">สถานะ: รอคำสั่ง</span>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // รับค่าล่าสุดจาก Backend ที่เซฟไว้ในไฟล์ JSON 
+        let currentPan = {{ pan | default(90) }};
+        let currentTilt = {{ tilt | default(90) }};
+        const STEP_SIZE = 10; 
+
+        // เมื่อโหลดหน้าเว็บเสร็จ ให้โหลดลิสต์วิดีโอทันที
+        window.onload = function() {
+            loadVideoList();
+        };
+
+        function moveServo(direction) {
+            if (direction === 'left') currentPan = Math.min(180, currentPan + STEP_SIZE);  
+            if (direction === 'right') currentPan = Math.max(0, currentPan - STEP_SIZE);  
+            if (direction === 'up') currentTilt = Math.min(180, currentTilt + STEP_SIZE);  
+            if (direction === 'down') currentTilt = Math.max(0, currentTilt - STEP_SIZE);  
+            sendServoCommand();
+        }
+
+        function sendSpeedCommand(value) {
+            fetch('/set_speed', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ speed: parseInt(value) })
+            }).catch(error => console.error('Error:', error));
+        }
+
+        function sendServoCommand() {
+            fetch('/set_servo', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pan: currentPan, tilt: currentTilt })
+            }).catch(error => console.error('Error:', error));
+        }
+
+        function resetServo() {
+            currentPan = 90;
+            currentTilt = 90;
+            sendServoCommand();
+        }
+
+        function toggleRecord(action) {
+            fetch('/record_control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: action })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const statusBadge = document.getElementById('recordStatusBadge');
+                const btnStart = document.getElementById('btnRecordStart');
+                const btnStop = document.getElementById('btnRecordStop');
+
+                if (data.status === 'recording') {
+                    statusBadge.className = 'badge bg-danger fs-6 w-100 py-2 rounded-pill';
+                    statusBadge.innerHTML = '🔴 กำลังบันทึกวิดีโอ...';
+                    btnStart.disabled = true;
+                    btnStop.disabled = false;
+                } else if (data.status === 'stopped') {
+                    statusBadge.className = 'badge bg-success fs-6 w-100 py-2 rounded-pill';
+                    statusBadge.innerHTML = '✅ บันทึกเสร็จสิ้น';
+                    btnStart.disabled = false;
+                    btnStop.disabled = true;
+                    // โหลดรายการวิดีโอใหม่เผื่อมีไฟล์ใหม่เข้ามา
+                    setTimeout(loadVideoList, 1000);
+                }
+            }).catch(error => alert("เกิดข้อผิดพลาดในการสั่งการบันทึก"));
+        }
+
+        // --- ระบบสอน AI จดจำใบหน้า ---
+        function learnNewFace() {
+            const nameInput = document.getElementById('personName');
+            const name = nameInput.value.trim();
+            
+            if(!name) {
+                alert('กรุณากรอกชื่อก่อนกดบันทึก');
+                nameInput.focus();
+                return;
+            }
+
+            fetch('/learn_face', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    alert('✅ ' + data.message);
+                    nameInput.value = '';
+                } else {
+                    alert('❌ ' + data.message);
+                }
+            })
+            .catch(error => alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับระบบ AI'));
+        }
+
+        // --- ระบบ Video Playback ---
+        function loadVideoList() {
+            fetch('/api/videos')
+                .then(response => response.json())
+                .then(files => {
+                    const listContainer = document.getElementById('videoListContainer');
+                    listContainer.innerHTML = '';
+                    
+                    if (files.length === 0) {
+                        listContainer.innerHTML = '<div class="text-center text-muted mt-3">ยังไม่มีวิดีโอ</div>';
+                        return;
+                    }
+
+                    files.forEach(filename => {
+                        const btn = document.createElement('button');
+                        btn.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2';
+                        btn.innerHTML = `<span>🎥 ${filename}</span>`;
+                        btn.onclick = () => playSelectedVideo(filename, btn);
+                        listContainer.appendChild(btn);
+                    });
+                })
+                .catch(error => console.error('Error loading videos:', error));
+        }
+
+        function playSelectedVideo(filename, btnElement) {
+            // ไฮไลต์ปุ่มที่ถูกเลือก
+            const allBtns = document.querySelectorAll('#videoListContainer button');
+            allBtns.forEach(b => b.classList.remove('active', 'bg-success', 'text-white'));
+            btnElement.classList.add('active', 'bg-success', 'text-white');
+
+            const player = document.getElementById('playbackPlayer');
+            const placeholder = document.getElementById('videoPlaceholder');
+            
+            player.src = '/play_video/' + filename;
+            placeholder.style.display = 'none';
+            player.style.display = 'block';
+            player.play();
+        }
+    </script>
+</body>
+</html>
