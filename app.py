@@ -2,7 +2,7 @@
 # sudo apt-get update
 # sudo apt-get install ffmpeg
 # pip install flask opencv-python gpiozero  --break-system-packages
-# AIzaSyBR_hlWlch69U35ps0SLvffEwVz6J1n9Oc
+
 import os
 import time
 import threading
